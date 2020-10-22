@@ -1,0 +1,243 @@
+﻿<Window x:Class="JiraTracker.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:jiraTracker="clr-namespace:JiraTracker"
+        xmlns:entities="clr-namespace:JiraTracker.Entities"
+        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance jiraTracker:Model}"
+        Title="Jira tracker" Height="450" Width="800">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <jiraTracker:TicksConverter x:Key="TicksConverter"/>
+        <jiraTracker:DateConverter x:Key="DateConverter"/>
+
+        <DataTemplate x:Key="CheckableItemTemplate" DataType="{x:Type jiraTracker:CheckableItem}">
+            <CheckBox Content="{Binding Title}" IsChecked="{Binding IsChecked}"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="IssueChangeTemplate" DataType="{x:Type entities:IssueChange}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" SharedSizeGroup="Stamp"/>
+                    <ColumnDefinition Width="*" SharedSizeGroup="Field"/>
+                    <ColumnDefinition Width="*" SharedSizeGroup="From" MaxWidth="400"/>
+                    <ColumnDefinition Width="*" SharedSizeGroup="To" MaxWidth="400"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding Timestamp}" Grid.Column="0" Margin="3 0"/>
+                <TextBlock Text="{Binding Field}" Grid.Column="1" Margin="10 0"/>
+                <TextBlock Text="{Binding OldValue}" Grid.Column="2" Margin="15 0" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding NewValue}" Grid.Column="3" Margin="15 0" TextWrapping="Wrap"/>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="IssueTemplate" DataType="{x:Type entities:Issue}">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="IsChecked"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="Key"/>
+                        <ColumnDefinition Width="*" SharedSizeGroup="Summary"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="Status"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="Type"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="Estimations"/>
+                    </Grid.ColumnDefinitions>
+                    <CheckBox x:Name="cbExpanded" IsChecked="False" Grid.Column="0" Margin="3 0"/>
+                    <TextBlock Text="{Binding Key}" Grid.Column="1" Margin="5 0"/>
+                    <TextBlock Text="{Binding Summary}" Grid.Column="2" Margin="5 0"/>
+                    <TextBlock Text="{Binding Type}" Grid.Column="3" Margin="5 0"/>
+                    <TextBlock Text="{Binding Status}" Grid.Column="4" Margin="5 0"/>
+                    <TextBlock Text="{Binding Estimations}" Grid.Column="5" Margin="25 0" HorizontalAlignment="Right"/>
+                </Grid>
+                <ItemsControl ItemsSource="{Binding Changes}" ItemTemplate="{StaticResource IssueChangeTemplate}"
+                              Visibility="{Binding Path=IsChecked, ElementName=cbExpanded, Converter={StaticResource BooleanToVisibilityConverter}}"
+                              Margin="50 10 0 10"/>
+            </StackPanel>
+        </DataTemplate>
+    </Window.Resources>
+
+    <DockPanel Background="#C5CBD3">
+        <Grid DockPanel.Dock="Left" Background="#8CBCB9">
+            <StackPanel Orientation="Vertical" Margin="5 3 5 3">
+                <TextBlock Text="User" FontWeight="Bold" Margin="5"/>
+                <TextBox x:Name="tbUser" MinWidth="200" VerticalContentAlignment="Center"/>
+                <TextBlock Text="Password" FontWeight="Bold" Margin="5"/>
+                <PasswordBox x:Name="tbPassword" MinWidth="200" VerticalContentAlignment="Center"/>
+
+                <Button Content="Verify" HorizontalAlignment="Right" Click="UncheckAllIssueTypes" Margin="0 5 0 0" Padding="3" Width="80"/>
+
+                <TextBlock Text="Project" FontWeight="Bold" Margin="5"/>
+                <ComboBox MinWidth="200" VerticalContentAlignment="Center"/>
+
+                <Separator Margin="3 10"></Separator>
+
+                <TextBlock Text="Filter issues" FontWeight="Bold" Margin="5"/>
+
+                <TextBox Text="{Binding IssueFilter, UpdateSourceTrigger=PropertyChanged}" MinWidth="200" VerticalContentAlignment="Center"/>
+
+                <TextBlock Text="Type" Margin="5"/>
+
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Margin="8 5 5 5" MaxHeight="150">
+                    <ItemsControl ItemsSource="{Binding IssueTypes}" ItemTemplate="{StaticResource CheckableItemTemplate}"/>
+                </ScrollViewer>
+
+                <Button Content="Clear all" HorizontalAlignment="Right" Click="UncheckAllIssueTypes" Padding="3" Width="80"/>
+
+                <TextBlock Text="Sprint" Margin="5"/>
+
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Margin="8 5 5 5" MaxHeight="150">
+                    <ItemsControl ItemsSource="{Binding IssueSprints}" ItemTemplate="{StaticResource CheckableItemTemplate}"/>
+                </ScrollViewer>
+
+                <Button Content="Clear all" HorizontalAlignment="Right" Click="UncheckAllIssueSprints" Padding="3" Width="80"/>
+
+                <TextBlock Text="Completion" Margin="5"/>
+
+                <RadioButton x:Name="CompletionAll" Content="All" Click="CompletionClicked" GroupName="Completion" IsChecked="True"/>
+                <RadioButton x:Name="CompletionDone" Content="Completed" Click="CompletionClicked" GroupName="Completion"/>
+                <RadioButton x:Name="CompletionNotDone" Content="Not completed" Click="CompletionClicked" GroupName="Completion"/>
+
+                <Separator Margin="3 10"></Separator>
+
+                <TextBlock Text="Filter changes" FontWeight="Bold" Margin="5"/>
+
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Margin="8 5 5 5" MaxHeight="200">
+                    <ItemsControl ItemsSource="{Binding ChangeFields}" ItemTemplate="{StaticResource CheckableItemTemplate}"/>
+                </ScrollViewer>
+
+                <Button Content="Clear all" HorizontalAlignment="Right" Click="UncheckAllChangeFields" Padding="3" Width="80"/>
+            </StackPanel>
+        </Grid>
+
+        <DockPanel>
+            <Expander DockPanel.Dock="Bottom" Header="Statistics" Background="#8CBCB9">
+                <Grid Height="165">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Total" FontWeight="Bold" Margin="5" Grid.Row="0" Grid.Column="0"/>
+
+                    <TextBlock Text="Issues" Margin="5" Grid.Row="1" Grid.Column="0"/>
+                    <TextBlock Text="{Binding Path=Statistics.Issues}" HorizontalAlignment="Right" Margin="5" Grid.Row="1" Grid.Column="1"/>
+
+                    <TextBlock Text="Story points" Margin="5" Grid.Row="2" Grid.Column="0"/>
+                    <TextBlock Text="{Binding Path=Statistics.StoryPoints}" HorizontalAlignment="Right" Margin="5" Grid.Row="2" Grid.Column="1"/>
+
+                    <TextBlock Text="Story points [completed]" Margin="5" Grid.Row="3" Grid.Column="0"/>
+                    <TextBlock Text="{Binding Path=Statistics.StoryPointsCompleted}" HorizontalAlignment="Right" Margin="5" Grid.Row="3" Grid.Column="1"/>
+
+                    <TextBlock Text="Spent time" Margin="5" Grid.Row="4" Grid.Column="0"/>
+                    <TextBlock Text="{Binding Path=Statistics.SpentTime}" HorizontalAlignment="Right" Margin="5" Grid.Row="4" Grid.Column="1"/>
+
+                    <TextBlock Text="Story point" FontWeight="Bold" Margin="5" Grid.Row="0" Grid.Column="3"/>
+
+                    <TextBlock Text="Max story point [days]" Margin="5" Grid.Row="1" Grid.Column="3"/>
+                    <TextBlock Text="{Binding Path=Statistics.IdealStoryPointMax}" HorizontalAlignment="Right" Margin="5" Grid.Row="1" Grid.Column="4"/>
+
+                    <TextBlock Text="Avg story point [days]" Margin="5" Grid.Row="2" Grid.Column="3"/>
+                    <TextBlock Text="{Binding Path=Statistics.IdealStoryPointAvg}" HorizontalAlignment="Right" Margin="5" Grid.Row="2" Grid.Column="4"/>
+
+                    <TextBlock Text="Min story point [days]" Margin="5" Grid.Row="3" Grid.Column="3"/>
+                    <TextBlock Text="{Binding Path=Statistics.IdealStoryPointMin}" HorizontalAlignment="Right" Margin="5" Grid.Row="3" Grid.Column="4"/>
+
+                    <TextBlock Text="Top 5 issue types" FontWeight="Bold" Margin="5" Grid.Row="0" Grid.Column="6"/>
+
+                    <TextBlock Text="{Binding Path=Statistics.TopIssue1}" Margin="5" Grid.Row="1" Grid.Column="6"/>
+                    <TextBlock Text="{Binding Path=Statistics.TopIssue1Count}" HorizontalAlignment="Right" Margin="5" Grid.Row="1" Grid.Column="7"/>
+
+                    <TextBlock Text="{Binding Path=Statistics.TopIssue2}" Margin="5" Grid.Row="2" Grid.Column="6"/>
+                    <TextBlock Text="{Binding Path=Statistics.TopIssue2Count}" HorizontalAlignment="Right" Margin="5" Grid.Row="2" Grid.Column="7"/>
+
+                    <TextBlock Text="{Binding Path=Statistics.TopIssue3}" Margin="5" Grid.Row="3" Grid.Column="6"/>
+                    <TextBlock Text="{Binding Path=Statistics.TopIssue3Count}" HorizontalAlignment="Right" Margin="5" Grid.Row="3" Grid.Column="7"/>
+
+                    <TextBlock Text="{Binding Path=Statistics.TopIssue4}" Margin="5" Grid.Row="4" Grid.Column="6"/>
+                    <TextBlock Text="{Binding Path=Statistics.TopIssue4Count}" HorizontalAlignment="Right" Margin="5" Grid.Row="4" Grid.Column="7"/>
+
+                    <TextBlock Text="{Binding Path=Statistics.TopIssue5}" Margin="5" Grid.Row="5" Grid.Column="6"/>
+                    <TextBlock Text="{Binding Path=Statistics.TopIssue5Count}" HorizontalAlignment="Right" Margin="5" Grid.Row="5" Grid.Column="7"/>
+                </Grid>
+            </Expander>
+
+            <Expander DockPanel.Dock="Top" Header="Timeline" Background="#8CBCB9">
+                <Grid>
+                    <TextBlock Text="{Binding ElementName=slTime, Path=Value, Converter={StaticResource DateConverter}}"
+                               FontSize="30" FontWeight="Bold" Margin="5" Opacity="0.2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <StackPanel Margin="15" ClipToBounds="True">
+                        <ItemsControl ItemsSource="{Binding Path=IssueSprints}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <xctk:TimelinePanel Orientation="Horizontal" BeginDate="{Binding Start}" EndDate="{Binding End}"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="xctk:TimelinePanel.Date" Value="{Binding Started}"/>
+                                    <Setter Property="xctk:TimelinePanel.DateEnd" Value="{Binding Completed}"/>
+                                    <Setter Property="ToolTip" Value="{Binding Title}"/>
+                                    <Setter Property="Margin" Value="0 3"/>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="2"/>
+                                            <RowDefinition Height="3"/>
+                                            <RowDefinition Height="2"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="5"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="3"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle x:Name="Line" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Grid.RowSpan="1" Fill="#E7EAEA"/>
+                                        <Rectangle x:Name="Left" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="1" Grid.RowSpan="3" Fill="#E7EAEA"/>
+                                        <Rectangle x:Name="Right" Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="1" Grid.RowSpan="3" Fill="#E7EAEA"/>
+                                    </Grid>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding IsChecked}" Value="true">
+                                            <Setter TargetName="Line" Property="Fill" Value="#D30C7B"/>
+                                            <Setter TargetName="Left" Property="Fill" Value="#D30C7B"/>
+                                            <Setter TargetName="Right" Property="Fill" Value="#D30C7B"/>
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Slider x:Name="slTime"
+                            Minimum="{Binding Start.Ticks}" Maximum="{Binding End.Ticks}"
+                            Value="{Binding Now, Converter={StaticResource TicksConverter}, UpdateSourceTrigger=Explicit}"
+                            Thumb.DragCompleted="DragCompleted"/>
+                    </StackPanel>
+                </Grid>
+            </Expander>
+
+            <Grid>
+                <ListView ItemsSource="{Binding Issues}" ItemTemplate="{StaticResource IssueTemplate}" Grid.IsSharedSizeScope="True"
+                          ScrollViewer.CanContentScroll="False"/>
+
+                <Button Content="Get data" Margin="35 15" Padding="10" VerticalAlignment="Bottom" HorizontalAlignment="Right" Command="{Binding RequestCommand}"/>
+            </Grid>
+        </DockPanel>
+    </DockPanel>
+</Window>

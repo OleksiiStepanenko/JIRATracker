@@ -1,0 +1,6 @@
+.vs/
+*.DotSettings
+*.user
+JiraTracker/bin/
+JiraTracker/obj/
+packages/
